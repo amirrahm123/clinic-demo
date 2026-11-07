@@ -1,0 +1,1512 @@
+@import "tailwindcss";
+
+/* Hover styles only on devices that really hover; touch gets :active feedback instead.
+   Block form on purpose: the one-line form cannot nest a selector inside an at-rule
+   (Tailwind reports "Unexpected end of input" and silently drops every hover: utility). */
+@custom-variant hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Design tokens                                                       */
+/* ------------------------------------------------------------------ */
+@theme inline {
+  --font-display: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-sans: var(--font-hanken), ui-sans-serif, system-ui, sans-serif;
+  --font-condensed: var(--font-barlow), "Arial Narrow", ui-sans-serif, sans-serif;
+}
+
+@theme {
+  --color-navy: #002d55;
+  --color-navy-hover: #00467f;
+  --color-navy-soft: #22507d;
+  --color-navy-deep: #001b34;
+  --color-ivory: #f6f3ee;
+  --color-sand: #ece6dc;
+  --color-ink: #1d2530;
+  --color-muted: #4c5664;
+  --color-subtle: #5b6573;
+  --color-orange: #f08a2c;
+  --color-peach: #f6c89a;
+  --color-line: rgba(0, 45, 85, 0.12);
+  --color-line-strong: rgba(0, 45, 85, 0.18);
+  --color-figure: #f6f2ea;
+
+  /* One color per department, used everywhere a department is referenced.
+     White text on each ≥ 4.5:1; pairwise ΔE ≥ 12 under protan/deutan/tritan simulation. */
+  --color-dept-ortho: #3070bd;
+  --color-dept-physio: #146052;
+  --color-dept-derma: #b04d18;
+  --color-dept-aesthetic: #5b3a8e;
+  --color-dept-gyne: #c94380;
+  --color-dept-labor: #333f4d;
+
+  --shadow-float: 0 24px 48px -24px rgba(0, 27, 52, 0.35);
+  --ease-roc: cubic-bezier(0.2, 0.7, 0.1, 1);
+
+  --breakpoint-xs: 23.75rem;
+
+  /* One type scale (the only sizes used anywhere):
+       display .h1 · h2 .h2 · h3 .h3 · lead .lead (20/18) · title text-xl (22) ·
+       body text-base (18 desktop / 17 mobile) · small text-sm (15, also the minimum for
+       any meta or caption) · eyebrow .eyebrow (15, condensed, uppercase).
+     Tailwind's xs/sm/base/lg/xl/2xl are remapped onto it so no utility can fall below. */
+  --text-xs: 0.9375rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.9375rem;
+  --text-sm--line-height: 1.5;
+  --text-base: var(--fs-body);
+  --text-base--line-height: 1.6;
+  --text-lg: 1.25rem;
+  --text-lg--line-height: 1.5;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.25;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 1.15;
+}
+
+/* ------------------------------------------------------------------ */
+/* Base                                                                */
+/* ------------------------------------------------------------------ */
+@layer base {
+  :root {
+    --header-h: 72px;
+    --fs-body: 1.0625rem; /* 17px */
+  }
+  @media (min-width: 1024px) {
+    :root {
+      --fs-body: 1.125rem; /* 18px */
+    }
+  }
+  @media (min-width: 1280px) {
+    :root {
+      --header-h: 88px;
+    }
+  }
+
+  html {
+    background: var(--color-ivory);
+    color: var(--color-ink);
+    /* Reserve the scrollbar track: no layout shift when a dialog locks scrolling */
+    scrollbar-gutter: stable;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* Anchor targets land below the fixed header */
+  main section[id] {
+    scroll-margin-top: calc(var(--header-h) + 8px);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--fs-body);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Readability: balanced headings (no single-word last lines), pretty paragraphs no
+     wider than 65 characters */
+  h1,
+  h2,
+  h3,
+  h4 {
+    text-wrap: balance;
+  }
+  main p {
+    max-width: 65ch;
+  }
+  p,
+  li,
+  dd,
+  blockquote {
+    text-wrap: pretty;
+  }
+  /* German: automatic hyphenation for body text and headings (lang="de" on <html>);
+     words from 10 letters, at least 4 before and after the break. Long compounds
+     (Wirbelsäulenvermessung, Beckenbodentraining) never overflow a 390px screen. */
+  :lang(de) :is(p, li, dd, dt, blockquote, h1, h2, h3, h4, summary, figcaption) {
+    hyphens: auto;
+    -webkit-hyphens: auto;
+    hyphenate-limit-chars: 10 4 4;
+  }
+  /* Never hyphenate names, addresses, numbers, buttons and labels */
+  :lang(de) :is(a, button, .eyebrow, .font-condensed, address, time, [data-no-hyphens]) {
+    hyphens: manual;
+    -webkit-hyphens: manual;
+  }
+
+  /* Text selection in brand colours */
+  ::selection {
+    background: var(--color-navy-soft);
+    color: #fff;
+  }
+
+  /* One focus ring everywhere: 2px navy, 2px offset (peach on navy surfaces) */
+  :focus-visible {
+    outline: 2px solid var(--color-navy);
+    outline-offset: 2px;
+  }
+  /* Programmatic focus targets (section headings, zone titles) show no ring */
+  [tabindex="-1"]:focus-visible {
+    outline: none;
+  }
+
+  .on-dark :focus-visible,
+  .on-dark:focus-visible {
+    outline-color: var(--color-peach);
+  }
+
+  button,
+  a,
+  summary {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  /* Lock page scroll while the intro or a modal is on screen. */
+  html[data-intro="play"],
+  html:has(dialog[open]) {
+    overflow: hidden;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Components                                                          */
+/* ------------------------------------------------------------------ */
+@layer components {
+  .container-roc {
+    width: 100%;
+    max-width: calc(1248px + 2 * clamp(20px, 6.667vw, 96px));
+    margin-inline: auto;
+    padding-inline: clamp(20px, 6.667vw, 96px);
+  }
+
+  /* Section rhythm: 72px on phones → 120px from 1200px (8px base scale); backgrounds
+     alternate ivory / white / navy deliberately (see HomePage order) */
+  .section {
+    padding-block: clamp(4.5rem, 2.25rem + 5.6vw, 7.5rem);
+  }
+  .section-white {
+    background: #fff;
+  }
+
+  /* Headings: line 1 navy, line 2 (.h-em) italic + lighter */
+  .h1,
+  .h2,
+  .h3 {
+    font-family: var(--font-display);
+    font-weight: 330;
+    color: var(--color-navy);
+    font-optical-sizing: auto;
+    text-wrap: balance;
+  }
+  /* Hero: "Regenerative medicine." must stay on one line in 6 of 12 columns from 1280px
+     (≈ 52px at 1280, 56px at 1440) */
+  .h1 {
+    font-size: clamp(2.25rem, 1.25rem + 2.5vw, 3.5rem);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+  }
+  .h2 {
+    font-size: clamp(1.875rem, 1.3rem + 2.5vw, 3.625rem);
+    line-height: 1.06;
+    letter-spacing: -0.022em;
+  }
+  .h3 {
+    font-size: clamp(1.75rem, 1.5rem + 1vw, 2.375rem);
+    line-height: 1.08;
+    letter-spacing: -0.02em;
+  }
+  .h-em {
+    display: block;
+    font-style: italic;
+    font-weight: 300;
+    color: var(--color-navy-soft);
+  }
+  .on-dark .h1,
+  .on-dark .h2,
+  .on-dark .h3 {
+    color: #fff;
+  }
+  .on-dark .h-em {
+    color: var(--color-peach);
+  }
+  /* Single italic accent word inside an otherwise plain heading */
+  .h-accent {
+    font-style: italic;
+    font-weight: 300;
+    color: var(--color-navy-soft);
+  }
+  .on-dark .h-accent {
+    color: var(--color-peach);
+  }
+
+  .eyebrow {
+    font-family: var(--font-condensed);
+    font-weight: 600;
+    font-size: 0.9375rem;
+    line-height: 1.2;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-subtle);
+  }
+  .on-dark .eyebrow {
+    color: rgba(255, 255, 255, 0.7);
+  }
+
+  .lead {
+    font-size: var(--text-lg);
+    line-height: 1.55;
+    color: var(--color-muted);
+    text-wrap: pretty;
+  }
+  @media (max-width: 1023px) {
+    .lead {
+      font-size: 1.125rem;
+    }
+  }
+  .on-dark .lead {
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    min-height: 48px;
+    padding: 0 1.5rem;
+    border-radius: 999px;
+    font-weight: 600;
+    font-size: var(--fs-body);
+    line-height: 1;
+    white-space: nowrap;
+    transition:
+      background-color 0.2s ease-out,
+      color 0.2s ease-out,
+      border-color 0.2s ease-out,
+      box-shadow 0.2s ease-out,
+      transform 0.15s var(--ease-roc);
+  }
+  .btn-primary {
+    background: var(--color-navy);
+    color: #fff;
+  }
+  .btn-light {
+    background: #fff;
+    color: var(--color-navy);
+  }
+  /* Secondary path: outline in navy, fills on hover */
+  .btn-outline {
+    border: 1px solid var(--color-navy);
+    color: var(--color-navy);
+    background: transparent;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .btn-primary:hover {
+      background: var(--color-navy-hover);
+      box-shadow: 0 10px 24px -12px rgba(0, 27, 52, 0.45);
+    }
+    .btn-light:hover {
+      background: var(--color-peach);
+    }
+    .btn-outline:hover {
+      background: var(--color-navy);
+      color: #fff;
+    }
+  }
+  .btn-lg {
+    min-height: 58px;
+    padding: 0 1.875rem;
+    font-size: 1.0625rem;
+  }
+
+  /* Secondary action: text link with 1px underline + arrow */
+  .link-arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    font-weight: 600;
+    color: var(--color-navy);
+  }
+  .link-arrow > span {
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 2px;
+  }
+  .link-arrow svg {
+    transition: transform 0.2s var(--ease-roc);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .link-arrow:hover svg {
+      transform: translateX(3px);
+    }
+  }
+  .on-dark .link-arrow {
+    color: #fff;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    min-height: 44px;
+    padding: 0 1.125rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-line-strong);
+    font-weight: 500;
+    font-size: 0.9375rem;
+    color: var(--color-navy);
+    background: transparent;
+    transition:
+      background-color 0.2s,
+      color 0.2s,
+      border-color 0.2s,
+      transform 0.15s var(--ease-roc);
+  }
+  /* Compact chips (hero topic row): 40px high, 15px text */
+  .chip-sm {
+    min-height: 40px;
+    padding: 0 0.875rem;
+    font-size: 0.9375rem;
+  }
+  .chip[aria-pressed="true"],
+  .chip[role="radio"][aria-checked="true"] {
+    background: var(--color-navy);
+    border-color: var(--color-navy);
+    color: #fff;
+  }
+  /* Chips in a department colour (team filter): fill with --dept on selection / hover */
+  .chip-dept[aria-checked="true"] {
+    background: var(--dept);
+    border-color: var(--dept);
+  }
+  .chip-dept[aria-checked="true"] > span:first-child {
+    background: #fff;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .chip:hover {
+      background: var(--color-navy);
+      border-color: var(--color-navy);
+      color: #fff;
+    }
+    .chip-dept:hover {
+      background: var(--dept);
+      border-color: var(--dept);
+    }
+    .chip-dept:hover > span:first-child {
+      background: #fff;
+    }
+  }
+
+  /* FAQ accordion (components/Accordion.tsx): the body grows from 0fr to 1fr in 300ms;
+     a collapsed body is hidden after the transition so nothing inside stays reachable */
+  .faq-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 0.3s var(--ease-roc);
+  }
+  .faq-body[data-expanded="true"] {
+    grid-template-rows: 1fr;
+  }
+  .faq-body > div {
+    overflow: hidden;
+    min-height: 0;
+    transition: visibility 0s 0.3s;
+  }
+  .faq-body[data-expanded="false"] > div {
+    visibility: hidden;
+  }
+  .faq-body[data-expanded="true"] > div {
+    visibility: visible;
+    transition-delay: 0s;
+  }
+
+  /* Team filter: cards fade out (opacity + 8px, 200ms), swap, fade back in */
+  .team-card {
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s var(--ease-roc);
+  }
+  .team-track[data-phase="leaving"] .team-card {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  .team-track[data-phase="entering"] .team-card {
+    animation: team-card-in 0.2s var(--ease-roc) both;
+  }
+  @keyframes team-card-in {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
+
+  /* Department cards (sm+): white rounded surface with a subtle border; on hover they
+     lift, the image zooms (Tailwind, in the component) and the top border takes the
+     department color. Below sm they stay compact list rows. */
+  @media (min-width: 640px) {
+    .dept-card {
+      background: #fff;
+      border: 1px solid var(--color-line);
+      border-top: 3px solid var(--color-line);
+      border-radius: 20px;
+      transition:
+        transform 0.2s var(--ease-roc),
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
+    }
+    @media (hover: hover) and (pointer: fine) {
+      .dept-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-float);
+        border-top-color: var(--dept);
+      }
+    }
+  }
+
+  /* -------------------------------------------------------------- */
+  /* ROC arc motif (components/Arc.tsx) – four uses, nothing beyond   */
+  /* -------------------------------------------------------------- */
+  /* 2. Journey section: gentle convex arc instead of a straight edge, top and bottom */
+  .arc-edges {
+    --arc-sag: clamp(20px, 3.5vw, 48px);
+    border-radius: 50% / var(--arc-sag);
+    margin-block: calc(var(--arc-sag) * -0.5);
+    padding-block: calc(clamp(4.5rem, 2.25rem + 5.6vw, 7.5rem) + var(--arc-sag) * 0.5);
+  }
+  /* 3. Card hover (department + doctor cards): the arc draws in under the title */
+  .arc-underline path {
+    stroke-dasharray: 100;
+    stroke-dashoffset: 100;
+    transition: stroke-dashoffset 0.3s var(--ease-roc);
+  }
+  .dept-card:focus-visible .arc-underline path,
+  .doctor-card:focus-within .arc-underline path {
+    stroke-dashoffset: 0;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .dept-card:hover .arc-underline path,
+    .doctor-card:hover .arc-underline path {
+      stroke-dashoffset: 0;
+    }
+  }
+  /* 4. Progress along the arc (review reading time): dashoffset 100 → 0 */
+  .arc-progress path {
+    stroke-dasharray: 100;
+    animation: arc-draw var(--review-ms, 6s) linear both;
+  }
+  .arc-progress[data-paused] path {
+    animation-play-state: paused;
+  }
+  @keyframes arc-draw {
+    from {
+      stroke-dashoffset: 100;
+    }
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+
+  /* Booking rows (Visit list + booking dialog): on hover/focus the row tints in its
+     department color (--dept, 8%), the border takes the color, the dot grows, the
+     arrow nudges up-right and the name turns the department color. 150ms. */
+  .booking-row {
+    --booking-t: 150ms;
+    border: 1px solid transparent;
+    transition:
+      background-color var(--booking-t) ease,
+      border-color var(--booking-t) ease,
+      transform var(--booking-t) var(--ease-roc);
+  }
+  .booking-pill {
+    border-color: var(--color-line-strong);
+  }
+  .booking-dot {
+    transition: transform var(--booking-t) var(--ease-roc);
+  }
+  .booking-name {
+    color: var(--color-navy);
+    transition: color var(--booking-t) ease;
+  }
+  .booking-arrow {
+    color: var(--color-navy);
+    transition:
+      transform var(--booking-t) var(--ease-roc),
+      color var(--booking-t) ease,
+      border-color var(--booking-t) ease;
+  }
+  /* Keyboard focus and touch press always; mouse hover only where hover exists */
+  .booking-row:where(:focus-visible, :active) {
+    background: color-mix(in srgb, var(--dept) 8%, transparent);
+    border-color: var(--dept);
+  }
+  .booking-row:where(:focus-visible, :active) .booking-dot {
+    transform: scale(1.3);
+  }
+  .booking-row:where(:focus-visible, :active) .booking-name {
+    color: var(--dept);
+  }
+  .booking-row:where(:focus-visible, :active) .booking-arrow {
+    transform: translate(3px, -3px);
+    color: var(--dept);
+    border-color: var(--dept);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .booking-row:hover {
+      background: color-mix(in srgb, var(--dept) 8%, transparent);
+      border-color: var(--dept);
+    }
+    .booking-row:hover .booking-dot {
+      transform: scale(1.3);
+    }
+    .booking-row:hover .booking-name {
+      color: var(--dept);
+    }
+    .booking-row:hover .booking-arrow {
+      transform: translate(3px, -3px);
+      color: var(--dept);
+      border-color: var(--dept);
+    }
+  }
+
+  /* Touch: pressed state instead of hover – slight scale + darken, no tap highlight */
+  @media (hover: none) {
+    .btn:active,
+    .chip:active,
+    .dept-card:active,
+    .booking-row:active,
+    .link-arrow:active {
+      transform: scale(0.98);
+      filter: brightness(0.96);
+    }
+  }
+
+  /* Nav links: animated underline from the left; active section highlighted */
+  .nav-link {
+    position: relative;
+    transition: color 0.2s ease;
+  }
+  .nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 8px;
+    height: 2px;
+    background: var(--color-navy);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 0.2s var(--ease-roc);
+  }
+  .nav-link[aria-current="true"] {
+    color: var(--color-navy);
+  }
+  .nav-link[aria-current="true"]::after {
+    transform: scaleX(1);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .nav-link:hover {
+      color: var(--color-navy);
+    }
+    .nav-link:hover::after {
+      transform: scaleX(1);
+    }
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Header: fixed bar + spacer of the same height (no content jump) */
+  /* -------------------------------------------------------------- */
+  .header-spacer {
+    height: var(--header-h);
+  }
+  .site-header {
+    position: fixed;
+    inset-inline: 0;
+    top: 0;
+    z-index: 40;
+    height: var(--header-h);
+    background: var(--color-ivory);
+    border-bottom: 1px solid var(--color-line);
+    transition:
+      transform 0.25s var(--ease-roc),
+      height 0.2s var(--ease-roc),
+      box-shadow 0.2s ease;
+  }
+  .site-header[data-scrolled="true"] {
+    box-shadow: 0 8px 24px -18px rgba(0, 27, 52, 0.35);
+  }
+  /* Desktop: compacts 88 → 68px after 40px */
+  @media (min-width: 1280px) {
+    .site-header[data-scrolled="true"] {
+      height: 68px;
+    }
+  }
+  /* Mobile/tablet: hides on scroll-down after 120px, back on any scroll-up */
+  @media (max-width: 1023px) {
+    .site-header[data-hidden="true"] {
+      transform: translateY(-100%);
+    }
+  }
+  /* Always visible while the menu (or any dialog) is open */
+  html:has(dialog[open]) .site-header {
+    transform: none;
+  }
+
+  /* "Open now" status (components/OpenNow.tsx): green-ish dot while open, muted when closed */
+  .open-now {
+    color: var(--color-muted);
+  }
+  .open-now-dot {
+    background: var(--color-subtle);
+  }
+  .open-now[data-open="true"] .open-now-dot {
+    background: var(--color-dept-physio);
+  }
+
+  /* Mobile booking bar: slides in after the hero CTA, hidden while a dialog is open */
+  .mobile-bar {
+    transform: translateY(100%);
+    transition: transform 0.3s var(--ease-roc);
+  }
+  .mobile-bar[data-visible="true"] {
+    transform: none;
+  }
+  html:has(dialog[open]) .mobile-bar {
+    transform: translateY(100%);
+  }
+
+  /* Photos: build-time blur layer on top, fades out 300ms after load (components/Photo.tsx) */
+  .photo-blur {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-size: cover;
+    background-position: center;
+    filter: blur(14px);
+    scale: 1.08;
+    transition: opacity 0.3s ease;
+    /* Safety: never stays on top if the load event is missed */
+    animation: photo-blur-away 0.3s 6s forwards;
+  }
+  .photo-blur[data-loaded] {
+    opacity: 0;
+  }
+  @keyframes photo-blur-away {
+    to {
+      opacity: 0;
+    }
+  }
+
+  /* Signature arch: full round top, 20px bottom corners */
+  .arch {
+    border-radius: 999px 999px 20px 20px;
+    overflow: hidden;
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Shared-element transition: doctor card portrait ⇄ dialog portrait */
+  /* (names doctor-<id> are set by DoctorProfileDialog.tsx for the   */
+  /* duration of the transition only; class "doctor" styles them)    */
+  /* -------------------------------------------------------------- */
+  ::view-transition-group(*) {
+    animation-duration: 0.35s;
+    animation-timing-function: var(--ease-roc);
+  }
+  /* The page itself cuts (no crossfade ghosting); the dialog keeps its own 250ms fade */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+  }
+  ::view-transition-old(root) {
+    display: none;
+  }
+  /* Crossfade the two portraits while the box travels – no stretching */
+  ::view-transition-old(.doctor),
+  ::view-transition-new(.doctor) {
+    height: 100%;
+    object-fit: cover;
+    overflow: clip;
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Dialogs / bottom sheets (native <dialog>)                       */
+  /* -------------------------------------------------------------- */
+  dialog.roc-dialog {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    width: min(560px, calc(100% - 2rem));
+    max-height: min(720px, calc(100dvh - 2rem));
+    overscroll-behavior: contain;
+    padding: 0;
+    border: 0;
+    border-radius: 20px;
+    background: var(--color-ivory);
+    color: var(--color-ink);
+    box-shadow: 0 40px 80px -30px rgba(0, 27, 52, 0.5);
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+    transition:
+      opacity 0.25s ease,
+      transform 0.25s var(--ease-roc),
+      overlay 0.25s allow-discrete,
+      display 0.25s allow-discrete;
+  }
+  dialog.roc-dialog[open] {
+    display: flex;
+    flex-direction: column;
+    opacity: 1;
+    transform: none;
+  }
+  @starting-style {
+    dialog.roc-dialog[open] {
+      opacity: 0;
+      transform: translateY(12px) scale(0.985);
+    }
+  }
+  dialog.roc-dialog::backdrop {
+    background: rgba(0, 27, 52, 0.48);
+    opacity: 0;
+    transition:
+      opacity 0.25s ease,
+      overlay 0.25s allow-discrete,
+      display 0.25s allow-discrete;
+  }
+  dialog.roc-dialog[open]::backdrop {
+    opacity: 1;
+  }
+  @starting-style {
+    dialog.roc-dialog[open]::backdrop {
+      opacity: 0;
+    }
+  }
+
+  /* Wide two-column dialog (doctor profile) */
+  dialog.roc-dialog.is-wide {
+    width: min(960px, calc(100% - 2rem));
+    max-height: min(760px, calc(100dvh - 2rem));
+  }
+  @media (max-width: 639px) {
+    dialog.roc-dialog.is-wide {
+      max-height: calc(100dvh - 1rem);
+    }
+  }
+  /* Profile timeline: year left, thin department-coloured line, station right */
+  .profile-timeline {
+    position: relative;
+    padding-left: 1rem;
+  }
+  .profile-timeline::before {
+    content: "";
+    position: absolute;
+    top: 0.5rem;
+    bottom: 0.5rem;
+    left: 0;
+    width: 2px;
+    border-radius: 2px;
+    background: color-mix(in srgb, var(--dept) 55%, transparent);
+  }
+  .profile-timeline > li {
+    position: relative;
+  }
+  .profile-timeline > li::before {
+    content: "";
+    position: absolute;
+    top: 0.5rem;
+    left: calc(-1rem - 3px);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dept);
+    box-shadow: 0 0 0 3px var(--color-ivory);
+  }
+  /* Doctor cards: "View profile" affordance (arrow slides in, name underlines) */
+  .doctor-cta {
+    opacity: 0;
+    transform: translateX(-4px);
+    transition:
+      opacity 0.2s ease,
+      transform 0.2s var(--ease-roc);
+  }
+  .doctor-card:focus-within .doctor-cta {
+    opacity: 1;
+    transform: none;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .doctor-card:hover .doctor-cta {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* Bottom sheet: always for .is-sheet, below 640px for every dialog */
+  @media (max-width: 639px) {
+    dialog.roc-dialog {
+      inset: auto 0 0 0;
+      margin: 0;
+      width: 100%;
+      max-width: none;
+      max-height: calc(100dvh - 3rem);
+      border-radius: 20px 20px 0 0;
+      opacity: 1;
+      transform: translateY(100%);
+      transition:
+        transform 0.4s var(--ease-roc),
+        overlay 0.4s allow-discrete,
+        display 0.4s allow-discrete;
+    }
+    dialog.roc-dialog[open] {
+      transform: translateY(var(--drag-y, 0px));
+    }
+    dialog.roc-dialog[data-dragging="true"] {
+      transition: none;
+    }
+    @starting-style {
+      dialog.roc-dialog[open] {
+        opacity: 1;
+        transform: translateY(100%);
+      }
+    }
+  }
+
+  dialog.roc-menu {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    overscroll-behavior: contain;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: var(--color-ivory);
+    color: var(--color-ink);
+    opacity: 0;
+    transition:
+      opacity 0.2s ease,
+      overlay 0.2s allow-discrete,
+      display 0.2s allow-discrete;
+  }
+  dialog.roc-menu[open] {
+    display: flex;
+    flex-direction: column;
+    opacity: 1;
+  }
+  @starting-style {
+    dialog.roc-menu[open] {
+      opacity: 0;
+    }
+  }
+
+  .sheet-handle {
+    display: none;
+  }
+  @media (max-width: 639px) {
+    .sheet-handle {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 28px;
+      flex: none;
+      touch-action: none;
+      cursor: grab;
+    }
+    .sheet-handle::before {
+      content: "";
+      width: 44px;
+      height: 4px;
+      border-radius: 4px;
+      background: var(--color-line-strong);
+    }
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Intro overlay                                                    */
+  /* The whole choreography is CSS so it runs from first paint and   */
+  /* never waits for hydration; JS only handles skip, scroll lock    */
+  /* and the session flag. States on <html>[data-intro]:             */
+  /*   play → assembling + hand-off at 0.8s   out → skipped early    */
+  /*   done → finished (hidden)               skip → never shown     */
+  /* -------------------------------------------------------------- */
+  #roc-intro {
+    display: none;
+    /* Timeline (~4.8s) – the only place timings live; IntroOverlay.tsx reads
+       --i-handoff-at / --i-handoff via getComputedStyle.
+         0.0–0.9  logo parts assemble (soft easing)      · pause
+         1.2–1.8  wordmark fades in                       · pause
+         2.0–2.5  line draws
+         2.5–3.3  tagline, word by word (400ms, 120ms apart)
+         3.3–4.2  hold, all still
+         4.2–4.8  hand-off: mark flies onto the header logo, overlay lifts */
+    --i-assemble: 0.75s; /* per part; stagger up to 0.15s → done at 0.9s */
+    --i-wordmark-at: 1.2s;
+    --i-wordmark: 0.6s;
+    --i-line-at: 2s;
+    --i-line: 0.5s;
+    --i-tagline-at: 2.5s;
+    --i-tagline: 0.4s; /* per word */
+    --i-word-gap: 0.12s;
+    --i-handoff-at: 4.2s;
+    --i-handoff: 0.6s;
+    --i-ease-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+    --i-ease-out: cubic-bezier(0.3, 0.7, 0.2, 1);
+    --logo-w: 200px;
+    --mark-w: calc(var(--logo-w) * 0.608); /* 137 of 225.3 viewBox units */
+    --tagline-h: 30px;
+    /* Hand-off target. IntroOverlay.tsx measures the header logo
+       (getBoundingClientRect) and overrides these three inline. */
+    --fly-x: 0px;
+    --fly-y: 0px;
+    --fly-s: 0.4;
+  }
+  @media (min-width: 768px) {
+    #roc-intro {
+      --logo-w: 280px;
+      --tagline-h: 38px;
+    }
+  }
+  html[data-intro="play"] #roc-intro,
+  html[data-intro="out"] #roc-intro {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+  }
+  /* No-JS safety net: if the hand-off never runs, the overlay still lifts
+     0.4s after the planned hand-off (JS normally wins and switches to "out"). */
+  html[data-intro="play"] #roc-intro {
+    animation: intro-hide 0.01s calc(var(--i-handoff-at) + 0.4s + var(--i-handoff)) both;
+  }
+  /* Separate keyframes on purpose: re-using "intro-hide" with a new delay would
+     only retime the running animation, which then finishes at once and hides
+     the overlay before the mark has flown. */
+  html[data-intro="out"] #roc-intro {
+    pointer-events: none;
+    animation: intro-hide-now 0.01s var(--i-handoff) both;
+  }
+  .intro-bg {
+    position: absolute;
+    inset: 0;
+    background: var(--color-ivory);
+    animation: intro-bg-out var(--i-handoff) calc(var(--i-handoff-at) + 0.4s) var(--i-ease-out)
+      both;
+  }
+  html[data-intro="out"] .intro-bg {
+    animation: intro-bg-out-now var(--i-handoff) var(--i-ease-out) both;
+  }
+  .intro-logo {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: var(--logo-w);
+    color: var(--color-navy);
+  }
+  .intro-mark {
+    width: var(--mark-w);
+    transform-origin: center;
+    will-change: transform;
+    animation: intro-rest-out 0.3s calc(var(--i-handoff-at) + 0.4s) both;
+  }
+  html[data-intro="out"] .intro-mark {
+    animation: intro-fly-now var(--i-handoff) var(--i-ease-out) both;
+  }
+  .intro-mark svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    overflow: visible;
+  }
+  .intro-mark path {
+    transform-box: fill-box;
+    animation: var(--i-assemble) var(--i-ease-soft) both;
+  }
+  .intro-mark .p-ol {
+    transform-origin: right center;
+    animation-name: intro-ol;
+  }
+  .intro-mark .p-or {
+    transform-origin: left center;
+    animation-name: intro-or;
+    animation-delay: 0.05s;
+  }
+  .intro-mark .p-r {
+    animation-name: intro-r;
+    animation-delay: 0.1s;
+  }
+  .intro-mark .p-c {
+    animation-name: intro-c;
+    animation-delay: 0.15s;
+  }
+  .intro-rest {
+    display: flex;
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    animation: intro-rest-out 0.3s calc(var(--i-handoff-at) + 0.4s) both;
+  }
+  html[data-intro="out"] .intro-rest {
+    animation: intro-rest-out-now 0.2s both;
+  }
+  .intro-wordmark {
+    margin-top: 9%;
+    width: 100%;
+    animation: intro-up var(--i-wordmark) var(--i-wordmark-at) var(--i-ease-soft) both;
+  }
+  /* 4. The intro's line is the arc too (same curvature as the review progress) */
+  .intro-line {
+    display: block;
+    margin-top: 14px;
+    width: min(220px, 100%);
+    height: 12px;
+    color: var(--color-navy);
+  }
+  .intro-line path {
+    stroke-dasharray: 100;
+    animation: arc-draw var(--i-line) var(--i-line-at) var(--i-ease-soft) both;
+  }
+  .intro-tagline {
+    margin-top: 14px;
+    height: var(--tagline-h);
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 300;
+    font-size: 1.25rem;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    /* Full navy: the words fade in, and an audit may sample a half-faded frame */
+    color: var(--color-navy);
+    white-space: nowrap;
+  }
+  /* Word by word: each span rises 400ms, 120ms after the previous one */
+  .intro-tagline > span {
+    display: inline-block;
+    animation: intro-word var(--i-tagline)
+      calc(var(--i-tagline-at) + var(--w, 0) * var(--i-word-gap)) var(--i-ease-soft) both;
+  }
+  @media (min-width: 768px) {
+    .intro-tagline {
+      font-size: 1.625rem;
+    }
+  }
+  .intro-skip {
+    position: absolute;
+    right: max(20px, env(safe-area-inset-right));
+    bottom: max(20px, env(safe-area-inset-bottom));
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 0.75rem;
+    font-family: var(--font-condensed);
+    font-weight: 600;
+    font-size: 0.875rem;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--color-navy);
+    animation: intro-rest-out 0.2s calc(var(--i-handoff-at) + 0.4s) both;
+  }
+  html[data-intro="out"] .intro-skip {
+    animation: intro-rest-out-now 0.15s both;
+  }
+
+  @keyframes intro-ol {
+    from {
+      opacity: 0;
+      transform: translateX(-32px) rotate(-24deg);
+    }
+  }
+  @keyframes intro-or {
+    from {
+      opacity: 0;
+      transform: translateX(32px) rotate(24deg);
+    }
+  }
+  @keyframes intro-r {
+    from {
+      opacity: 0;
+      transform: translateX(-24px);
+    }
+  }
+  @keyframes intro-c {
+    from {
+      opacity: 0;
+      transform: translateX(24px);
+    }
+  }
+  @keyframes intro-up {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+  }
+  @keyframes intro-word {
+    from {
+      opacity: 0;
+      transform: translateY(7px);
+    }
+  }
+  /* Hand-off: the mark travels onto the header logo (target measured by
+     IntroOverlay.tsx) and crossfades into it over the last quarter. */
+  @keyframes intro-fly-now {
+    0% {
+      opacity: 1;
+    }
+    75% {
+      opacity: 1;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(var(--fly-x), var(--fly-y)) scale(var(--fly-s));
+    }
+  }
+  @keyframes intro-bg-out {
+    to {
+      opacity: 0;
+      transform: translateY(-2%);
+    }
+  }
+  @keyframes intro-bg-out-now {
+    to {
+      opacity: 0;
+      transform: translateY(-2%);
+    }
+  }
+  @keyframes intro-rest-out {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes intro-rest-out-now {
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes intro-hide {
+    to {
+      visibility: hidden;
+    }
+  }
+  @keyframes intro-hide-now {
+    to {
+      visibility: hidden;
+    }
+  }
+
+  /* Hero entrance: one quick stagger (≤ 0.4s) as the overlay lifts. */
+  html[data-intro="out"] .hero-stagger > *,
+  html[data-intro="done"] .hero-stagger > * {
+    animation: hero-in 0.3s var(--ease-roc) both;
+    animation-delay: calc(var(--i, 0) * 60ms);
+  }
+  /* Wipe + rise instead of a fade: text is never shown half-transparent (keeps the
+     colour-contrast audit deterministic while the entrance runs) */
+  @keyframes hero-in {
+    from {
+      clip-path: inset(0 0 100% 0);
+      transform: translateY(12px);
+    }
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Body map                                                         */
+  /* -------------------------------------------------------------- */
+  .panel-swap {
+    animation: panel-in 0.25s ease both;
+  }
+  @keyframes panel-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  .zone-ring {
+    animation: zone-pulse 2.6s ease-out infinite;
+  }
+  /* Attention pulse after the free-text router opened a zone */
+  .zone-route-ring {
+    animation: zone-route 0.6s ease-out 3 both;
+  }
+  @keyframes zone-route {
+    from {
+      transform: scale(0.6);
+      opacity: 1;
+    }
+    to {
+      transform: scale(2.1);
+      opacity: 0;
+    }
+  }
+  @keyframes zone-pulse {
+    0% {
+      transform: scale(0.55);
+      opacity: 0.9;
+    }
+    70%,
+    100% {
+      transform: scale(1.25);
+      opacity: 0;
+    }
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Scroll reveals (see components/Reveal.tsx)                       */
+  /* Hidden states exist only under html.js-reveal and only until     */
+  /* [data-in] is set; [data-instant] = was already in view → no      */
+  /* animation. Variables: --rv-d distance, --rv-t duration factor.   */
+  /* -------------------------------------------------------------- */
+  :root {
+    --rv-d: 16px;
+    --rv-t: 1;
+    --rv-ease: cubic-bezier(0.2, 0.7, 0.1, 1);
+  }
+  @media (max-width: 639px) {
+    :root {
+      --rv-d: 12px;
+      --rv-t: 0.8;
+    }
+  }
+
+  /* heading: clip wipe left→right + 8px rise, 700ms */
+  [data-reveal="heading"] {
+    transition:
+      clip-path calc(700ms * var(--rv-t)) var(--rv-ease),
+      transform calc(700ms * var(--rv-t)) var(--rv-ease);
+  }
+  html.js-reveal [data-reveal="heading"]:not([data-in]) {
+    clip-path: inset(-15% 100% -15% 0);
+    transform: translateY(8px);
+  }
+
+  /* text / buttons / footer: fade-up, 600ms, 120ms after the heading */
+  [data-reveal="text"] {
+    transition:
+      opacity calc(600ms * var(--rv-t)) var(--rv-ease) calc(120ms * var(--rv-t)),
+      transform calc(600ms * var(--rv-t)) var(--rv-ease) calc(120ms * var(--rv-t));
+  }
+  html.js-reveal [data-reveal="text"]:not([data-in]) {
+    opacity: 0;
+    transform: translateY(var(--rv-d));
+  }
+
+  /* grids: children left→right, 80ms stagger, ≤ 600ms in total */
+  [data-reveal="grid"] > * {
+    transition:
+      opacity calc(400ms * var(--rv-t)) var(--rv-ease),
+      transform calc(400ms * var(--rv-t)) var(--rv-ease);
+    transition-delay: calc(min(var(--i, 0) * 80ms, 200ms) * var(--rv-t));
+  }
+  html.js-reveal [data-reveal="grid"]:not([data-in]) > * {
+    opacity: 0;
+    transform: translateY(var(--rv-d));
+  }
+
+  /* images: clip wipe inside the element's own radius + 1.04→1 zoom, 900ms */
+  [data-reveal="image"] {
+    transition: clip-path calc(900ms * var(--rv-t)) var(--rv-ease);
+  }
+  [data-reveal="image"] img {
+    transition: transform calc(900ms * var(--rv-t)) var(--rv-ease);
+  }
+  html.js-reveal [data-reveal="image"]:not([data-in]) {
+    clip-path: inset(0 100% 0 0);
+  }
+  html.js-reveal [data-reveal="image"]:not([data-in]) img {
+    transform: scale(1.04);
+  }
+
+  /* -------------------------------------------------------------- */
+  /* Journey (components/JourneySteps.tsx)                           */
+  /* -------------------------------------------------------------- */
+  /* Photo stack: the active step's photo crossfades in over 500ms */
+  .journey-photo {
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .journey-photo.is-active {
+    opacity: 1;
+  }
+  /* Review card: 400ms crossfade (200 out + 200 in) and the reading-time progress line */
+  .review-text {
+    transition: opacity 0.2s ease;
+  }
+  .review-text[data-fading] {
+    opacity: 0;
+  }
+  .review-progress {
+    position: absolute;
+    inset-inline: 12px;
+    bottom: 2px;
+    height: 8px;
+    color: var(--color-peach);
+  }
+
+  /* Step buttons: active = navy-soft surface, peach bar on the left, full opacity;
+     the others sit at 60% and brighten on hover/focus */
+  .journey-step {
+    position: relative;
+    opacity: 0.6;
+    border-left: 3px solid transparent;
+    transition:
+      opacity 0.25s ease,
+      background-color 0.25s ease,
+      border-color 0.25s ease;
+  }
+  .journey-step[aria-pressed="true"] {
+    opacity: 1;
+    background: var(--color-navy-soft);
+    border-left-color: var(--color-peach);
+  }
+  .journey-step:focus-visible {
+    opacity: 1;
+  }
+  @media (hover: hover) and (pointer: fine) {
+    .journey-step:hover {
+      opacity: 1;
+      background: rgba(255, 255, 255, 0.06);
+    }
+    .journey-step[aria-pressed="true"]:hover {
+      background: var(--color-navy-soft);
+    }
+  }
+
+  /* body map: figure fades in, markers pop (scale .6→1, 40ms stagger) */
+  [data-reveal="bodymap"] .figure-turn > svg {
+    transition: opacity calc(500ms * var(--rv-t)) ease;
+  }
+  html.js-reveal [data-reveal="bodymap"]:not([data-in]) .figure-turn > svg {
+    opacity: 0;
+  }
+
+  /* Front/back turn: rotateY 0→90° (front fades), swap at the edge, -90→0° (back appears);
+     2 × 250ms, perspective 1200px. Markers fade out in the first 150ms (see BodyMap.tsx). */
+  .figure-stage {
+    perspective: 1200px;
+  }
+  .figure-turn {
+    transform-origin: 50% 50%;
+  }
+  .figure-stage[data-phase="out"] .figure-turn {
+    animation: figure-out 250ms cubic-bezier(0.5, 0, 0.9, 0.6) forwards;
+  }
+  .figure-stage[data-phase="in"] .figure-turn {
+    animation: figure-in 250ms cubic-bezier(0.1, 0.4, 0.5, 1) both;
+  }
+  .figure-stage[data-phase="out"] .zone-marker {
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+  @keyframes figure-out {
+    to {
+      transform: rotateY(90deg);
+      opacity: 0;
+    }
+  }
+  @keyframes figure-in {
+    from {
+      transform: rotateY(-90deg);
+      opacity: 0;
+    }
+  }
+  /* Region tint under a hovered / focused / selected marker */
+  .figure-region {
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+  .figure-region[data-active] {
+    opacity: 1;
+  }
+  html.js-reveal [data-reveal="bodymap"]:not([data-in]) .zone-marker {
+    opacity: 0;
+    scale: 0.6;
+  }
+  html.js-reveal [data-reveal="bodymap"][data-in] .zone-marker {
+    animation: marker-pop calc(400ms * var(--rv-t)) var(--rv-ease) both;
+    animation-delay: calc(var(--i, 0) * 40ms * var(--rv-t));
+  }
+  @keyframes marker-pop {
+    from {
+      opacity: 0;
+      scale: 0.6;
+    }
+  }
+
+  /* already in view on load / after an anchor jump: show without animating. Only the
+     reveal itself: the marker pulse rings keep their infinite animation (a refresh with
+     the body map in view, or the #koerper anchor, takes this path). */
+  [data-reveal][data-instant],
+  [data-reveal][data-instant] :not(.zone-ring, .zone-route-ring),
+  [data-reveal][data-instant] .zone-marker {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fade-right {
+    mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent);
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Reduced motion: no intro, no pulses, no transitions                 */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+  .zone-ring {
+    animation: none;
+    opacity: 0.45;
+    transform: none;
+  }
+  .zone-route-ring {
+    animation: none;
+    transform: scale(1.4);
+    opacity: 0.8;
+  }
+  /* Belt and braces (the head script never adds js-reveal under reduced motion) */
+  html.js-reveal [data-reveal]:not([data-in]),
+  html.js-reveal [data-reveal="grid"]:not([data-in]) > *,
+  html.js-reveal [data-reveal="bodymap"]:not([data-in]) .figure-turn > svg,
+  html.js-reveal [data-reveal="image"]:not([data-in]) img {
+    opacity: 1 !important;
+    transform: none !important;
+    clip-path: none !important;
+  }
+  html.js-reveal [data-reveal="bodymap"]:not([data-in]) .zone-marker {
+    opacity: 1 !important;
+    scale: none !important;
+  }
+}
